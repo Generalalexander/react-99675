@@ -1,0 +1,249 @@
+<! DOCTYPE HTML>
+<html lang="pl">
+
+<head>
+<meta charset="UTF-8">
+<title>Memory</title>
+<link href='https://fonts.googleapis.com/css?family=Inconsolata:400,700&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+<script>
+
+const ROWS = 4
+const COLUMNS = 4
+//Ilosc wszystkich komórek 
+const NCELLS = ROWS * COLUMNS;
+
+//Tablica na karty
+let plansza = Array(16);
+
+//Ilość ruchów w grze
+let nMoves=0;
+
+//Numer aktualnego ruchu
+let currMove=0;
+
+//Tablica tymczasowa na indexy klikanych kart
+let indexes = Array(2);
+
+//Flaga mówiąca czy "odwrócić spowrotem" karty
+let hide = false;
+
+//Id karty z poprzedniego "kliknięcia"
+let prevId = -1;
+
+
+//Generujemy planszę z grą
+function generate_game()
+{
+	//Chwytamy element o id "planza"
+	let div = document.getElementById("plansza");
+	div.innerHTML = "";
+	let content = "";
+	let cardNum = 1;
+	
+	//Zerowanie ogólnej ilości ruchów w grze
+	nMoves=0;
+	
+	
+	//Zerowanie tablicy tymczasowej z indexami
+	for(let i=0; i<2;++i)
+	{
+		indexes[i]=-1;
+	}
+	
+	//Tworzenie tablicy 4x4 z divów z obrazkami
+	for(let i=0;i<4;++i)
+	{
+		for(let j=0;j<5;++j)
+		{
+			if(j!=4)
+			{
+				content += '<div id="'+(i*COLUMNS+j)+'" onClick="move(this.id)" class="cell"><img src="imgmemory/'+cardNum+'.jpg"/></div>';
+				plansza[i*COLUMNS+j] = cardNum;
+				
+				j++;
+				content += '<div id="'+(i*COLUMNS+j)+'" onClick="move(this.id)" class="cell"><img src="imgmemory/'+cardNum+'.jpg"/></div>';
+				plansza[i*COLUMNS+j] = cardNum;
+				
+				cardNum+=1;
+			}
+			else content += '<div style="clear:both"></div>';
+		}
+	}
+	div.innerHTML = content;
+	
+	//aktualizowanie wartości w boxie obok przycisku
+	menu.points.value=nMoves;
+}
+
+
+//funkcja mieszająca
+function shuffle()
+{
+	//Generowanie planszy
+	generate_game();
+	
+	//Zerowanie zawartości każdego z divów(kart)
+	for(let i=0; i<NCELLS;++i)
+	{
+		document.getElementById(i.toString()).innerHTML = "";
+	}
+	
+	//Losowanie układu kart
+	for(let i=0; i<NCELLS/2;++i)
+	{
+		for(let j=0;j<2;++j)
+		{
+			while(true)
+			{
+				//Losowanie liczby 0-15
+				l = Math.floor(Math.random()*16);
+				//Sprawdzamy czy div o podanym id jest pusty
+				if (document.getElementById(l.toString()).innerHTML.length==0)
+				{
+					//Jezeli tak to ustaw obrazek pustej karty
+					let div = document.getElementById(l.toString());
+					div.innerHTML = '<img src="imgmemory/'+0+'.jpg"/>';
+					
+					//Zapisujemy jaka karta powinna się znaleźć pod wylosowanym "miejscem w tabeli 4x4"
+					plansza[l] = i+1
+					
+					//Wychodzimy z while(True)
+					break;
+				}
+			}
+		}
+	}
+}
+
+function move(id)
+{
+	// Chwytamy element o ID klikniętej karty
+	let div = document.getElementById(id);
+	
+	//Jezeli kliknięta została poprzednia karta, pomiń resztę fukncji
+	if(id == prevId) return;
+	
+	//Jezeli odkrywamy karte numer 1
+	if(currMove==0)
+	{
+		if(!hide)
+		{
+			//Poprawnie odgadnięte karty usuwamy z planszy. Sprawiamy aby były nie widoczne
+			let tmpDiv = document.getElementById(indexes[1])
+			{
+				if(tmpDiv!=null) tmpDiv.style.visibility = "hidden";
+				plansza[indexes[1]]=-1
+			}
+			tmpDiv = document.getElementById(indexes[0]);
+			{
+				if(tmpDiv!=null) tmpDiv.style.visibility = "hidden";
+				plansza[indexes[0]]=-1
+			}
+		}
+		else
+		{
+			//Nie poprawnie odgadnięte karty "odwracamy" spowrotem
+			for (let j =0;j<2;++j)
+			{
+				let tmpDiv = document.getElementById(indexes[j]);
+				if(tmpDiv!=null) tmpDiv.innerHTML = '<img src="imgmemory/'+0+'.jpg"/>';
+			}
+		}
+		
+		//Odkrywamy klikniętą kartę odpowiednim obrazkiem
+		div.innerHTML = '<img src="imgmemory/'+plansza[id]+'.jpg"/>';
+		//Zapisujemy id obecnej karty w tablicy tymczasowej
+		indexes[currMove] = id;
+		//Zwiekszamy numer ruchu
+		currMove+=1;
+	}
+	// Jezeli odkrywamy drugą kartę
+	else if(currMove==1)
+	{
+		//Odkrywamy klikniętą kartę odpowiednim obrazkiem
+		div.innerHTML = '<img src="imgmemory/'+plansza[id]+'.jpg"/>';
+		//Zapisujemy id obecnej karty w tablicy tymczasowej
+		indexes[currMove] = id;
+		//Zerujemy licznik aktualnych ruchów
+		currMove=0;
+		
+		//Zwiększamy ogólny licznik ruchów w grze
+		nMoves++;
+		//I aktualizujemy go na stronie ( w boxie obok przycisku )
+		menu.points.value=nMoves;
+		
+		
+		//Jezeli karty są identyczne to ustawiamy ich index w tablicy plansza na -1
+		if(plansza[indexes[0]] == plansza[indexes[1]])
+		{
+			plansza[indexes[1]]=-1;
+			plansza[indexes[0]]=-1;
+			hide = false
+		}
+		//A jezeli nie to ustawiamy flage hide na True
+		else hide = true;
+		
+	}
+	
+	//Po kazym ruchu sprawdzamy czy gra nie zakończyła sie oraz ustawiamy zmienną prevID na id obecnie klikniętej karty
+	check_win();
+	prevId=id;
+}
+
+
+//Sprawdzamy czy wszystkie pola w tablicy plansza mają wartość -1, jeżeli tak to koniec gry
+function check_win()
+{
+	let counter = NCELLS;
+	for(let i=0;i<NCELLS;++i)
+	{
+		if(plansza[i]==-1) counter-=1;
+	}
+	if (counter == 0) window.alert("Brawo, wygrałeś w "+nMoves+" ruchach");
+}	
+
+</script>
+
+<style>
+#container
+{
+	width: 640px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.cell
+{
+	width: 150px;
+	height: 150px;
+	float: left;
+	margin: 5px;
+}
+
+img
+{
+	width: 150px;
+	height: 150px;
+}
+
+</style>
+
+</head>
+
+<body onload="generate_game()">
+
+<div id="container">
+	<div id = "plansza"></div>
+	
+	</br>
+	
+	<div style="text-align:center; max-width:180px;margin-left: auto; margin-right: auto; ">
+	<button onclick="shuffle()" style="float: left;">Rozpocznij gre</button>
+	<form name="menu" style="float: left;">
+	<input type="text" disabled style = "width:25px; text-align: center;" value = "1", name = "points">
+	</form>
+	</div>
+</div>
+
+</body>
+</html>
